@@ -1,15 +1,20 @@
 import streamlit as st
 import pandas as pd
 import pickle
-from sklearn.preprocessing import LabelEncoder
-import numpy as np
 
-# Load the saved model
-with open("best_model.pkl", "rb") as f:
-    model = pickle.load(f)
+# Load the saved model (which includes the preprocessing pipeline)
+try:
+    with open("best_model.pkl", "rb") as f:
+        model = pickle.load(f)
+except Exception as e:
+    st.error(f"Error loading model: {str(e)}")
 
-# Extract unique bike names from the dataset
-unique_bike_names = [
+# Title and description
+st.title("🏍️ Bike Price Prediction App")
+st.markdown("Enter the bike details to get an estimated selling price.")
+
+# List of bike names for auto-suggestions
+bike_names = [
     "Royal Enfield Classic 350",
     "Honda Dio",
     "Royal Enfield Classic Gunmetal Grey",
@@ -20,188 +25,155 @@ unique_bike_names = [
     "Royal Enfield Bullet 350 [2007-2011]",
     "Hero Honda CBZ extreme",
     "Bajaj Discover 125",
-    "Hero Glamour",
-    "Royal Enfield Bullet 500",
-    "Hero Honda Splendor Plus",
-    "Yamaha FZ S",
-    "TVS Apache RTR 160",
-    "Suzuki Gixxer SF",
-    "KTM RC200",
-    "Honda CBR 150R",
+    "Yamaha FZ16",
+    "Honda Navi",
+    "Bajaj Avenger Street 220",
+    "Yamaha YZF R3",
+    "Jawa 42",
+    "Suzuki Access 125 [2007-2016]",
+    "Hero Honda Glamour",
+    "Yamaha YZF R15 S",
+    "Yamaha FZ25",
+    "Hero Passion Pro 110",
+    "Jawa Standard",
     "Royal Enfield Thunderbird 350",
-    "Honda CB Unicorn",
+    "Honda Dream Yuga",
+    "TVS Apache RTR 160 4V",
+    "Yamaha Fazer [2009-2016]",
+    "Hero Honda Splendor NXG",
+    "Hero Glamour 125",
+    "Yamaha FZ S [2012-2016]",
+    "Hero Xtreme Sports",
+    "Honda X-Blade",
+    "Honda CB Shine SP",
+    "Honda Activa 5G",
+    "Hero Glamour FI",
+    "Bajaj Dominar 400",
+    "KTM 390 Duke",
+    "Hero Passion XPro",
+    "Yamaha FZ S V 2.0",
+    "Hero Achiever 150",
+    "Yamaha Saluto",
+    "Bajaj Discover 100",
+    "Honda CB Trigger",
+    "Royal Enfield Electra 5 S",
+    "Hero Splendor PRO",
+    "Hero Honda Passion Plus",
     "Bajaj Pulsar 150",
-    "Royal Enfield Himalayan",
-    "Bajaj Avenger Street 150",
-    "Honda CB Unicorn 160",
-    "TVS Jupiter",
-    "Yamaha FZ",
-    "Honda Activa",
-    "Hero Passion Pro",
-    "Suzuki Access",
-    "KTM Duke 200",
-    "Hero Honda CD 100",
-    "Yamaha YZF R15",
-    "Bajaj Pulsar NS200",
-    "Honda Dream Neo",
-    "TVS Apache RTR 180",
-    "Hero Splendor iSmart",
-    "Hero Honda Hunk",
+    "Bajaj Pulsar 150 [2001-2011]",
+    "Honda Activa 3G",
+    "Hero Hunk",
+    "Suzuki Let''s",
+    "Royal Enfield Electra 4 S",
+    "TVS Scooty Pep Plus",
+    "Mahindra Mojo XT300",
+    "TVS Apache RTR 160",
+    "Bajaj Pulsar AS200",
+    "Royal Enfield Thunderbird 350X",
+    "Suzuki Intruder 150",
+    "Hero Honda Karizma ZMR [2010]",
+    "Bajaj Xcd",
+    "Hero Splendor Plus",
+    "Honda CB Unicorn 150",
+    "Honda Activa i [2016-2017]",
+    "TVS Scooty Zest 110",
+    "Hero CD Deluxe",
+    "Suzuki GS150R",
+    "Bajaj Pulsar 220S",
+    "Honda Activa 4G",
+    "Bajaj Pulsar NS160",
+    "Royal Enfield Classic Desert Storm",
+    "Suzuki Gixxer SF",
+    "TVS Apache RTR 200 4V",
+    "Bajaj V15",
+    "TVS XL 100 Heavy Duty",
+    "Aprilia SR 125",
     "Hero HF Deluxe",
-    "Honda Activa i",
-    "Hero Honda Super Splendor",
-    # Add all other unique names from your dataset here
+    "Honda Aviator",
+    "Vespa SXL 149",
+    "Hero Xtreme [2013-2014]",
+    "UM Renegade Commando",
 ]
 
-# Manually define the classes for LabelEncoder to avoid loading preprocessed_data.pkl
-le_bike_name = LabelEncoder()
-le_bike_name.classes_ = np.array(unique_bike_names)
-le_seller_type = LabelEncoder()
-le_seller_type.classes_ = np.array(["Individual", "Dealer"])
-le_owner = LabelEncoder()
-le_owner.classes_ = np.array(
-    ["1st owner", "2nd owner", "3rd owner", "4th owner and above"]
+# Initialize the session state for bike_name if not already set
+if "bike_name" not in st.session_state:
+    st.session_state.bike_name = ""
+
+# Input for bike name with suggestions
+bike_name_input = st.text_input(
+    "Bike Name", value=st.session_state.bike_name, placeholder="Type the bike name..."
 )
 
-# Title and description
-st.title("🏍️ Bike Price Prediction App")
-st.markdown(
-    """
-    Welcome to the **Bike Price Prediction App**! 
-    Enter the details of the bike you're interested in to get an estimated selling price. This model leverages historical bike sales data.
-"""
-)
+# Show filtered suggestions as the user types
+matching_bikes = [
+    name for name in bike_names if bike_name_input.lower() in name.lower()
+]
 
-# Custom CSS for better styling
+# Display suggestions as buttons with unique keys
+if matching_bikes and bike_name_input != "":
+    st.write("Suggestions:")
+    for i, suggestion in enumerate(matching_bikes):
+        if st.button(suggestion, key=f"button_{i}"):  # Add unique key here
+            st.session_state.bike_name = (
+                suggestion  # Update session state with selected suggestion
+            )
+
+# Other inputs
+year = st.number_input("Year", min_value=1900, max_value=2023, value=2020, step=1)
+seller_type = st.selectbox("Seller Type", ["Individual", "Dealer"])
+owner = st.selectbox(
+    "Owner Type", ["1st owner", "2nd owner", "3rd owner", "4th owner and above"]
+)
+km_driven = st.number_input("Kilometers Driven", min_value=0, step=1)
+ex_showroom_price = st.number_input("Ex-showroom Price (in INR)", min_value=0, step=500)
+
+# Custom CSS for the predict button color
 st.markdown(
     """
     <style>
-        .main-title { 
-            font-size: 32px; 
-            color: #2E86C1;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 25px;
-        }
-        .custom-button {
-            background-color: #54196b;
-            color: white;
-            font-size: 18px;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        .custom-button:hover {
-            background-color: #B695C0;
-        }
-        .result-box {
-            background-color: #333333;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-            color: white;
-            font-size: 22px;
-            text-align: center;
-            font-weight: bold;
-        }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
-
-# Get user input
-bike_name = st.selectbox(
-    "Bike Name",
-    [""] + list(le_bike_name.classes_),
-    index=0,
-    help="Start typing to select the bike name",
-)
-year = st.number_input(
-    "Year",
-    min_value=1900,
-    max_value=2023,
-    value=2020,
-    step=1,
-    help="Enter the manufacturing year",
-)
-seller_type = st.selectbox(
-    "Seller Type",
-    le_seller_type.classes_,
-    index=0,
-    help="Is the seller an individual or a dealer?",
-)
-owner = st.selectbox(
-    "Owner Type",
-    le_owner.classes_,
-    index=0,
-    help="Select the ownership type of the bike",
-)
-km_driven = st.number_input(
-    "Kilometers Driven",
-    min_value=0,
-    step=1,
-    help="Enter the total kilometers the bike has been driven",
-)
-ex_showroom_price = st.number_input(
-    "Ex-showroom Price (in INR)",
-    min_value=0,
-    step=500,
-    help="Enter the ex-showroom price of the bike",
-)
-
-# Prepare the user input as a dataframe for prediction
-user_input = pd.DataFrame(
-    {
-        "name": [bike_name] if bike_name else [np.nan],
-        "year": [year],
-        "seller_type": [seller_type],
-        "owner": [owner],
-        "km_driven": [km_driven],
-        "ex_showroom_price": [ex_showroom_price],
+    div.stButton > button:first-child {
+        background-color: #bd2052;
+        color: white;
+        font-weight: bold;
+        padding: 0.5rem 2rem;
+        border: none;
+        border-radius: 5px;
     }
-)
-
-# Ensure input is valid for the model
-if bike_name:
-    user_input["name"] = le_bike_name.transform(user_input["name"].astype(str))
-user_input["seller_type"] = le_seller_type.transform(
-    user_input["seller_type"].astype(str)
-)
-user_input["owner"] = le_owner.transform(user_input["owner"].astype(str))
-
-# Use custom HTML button for prediction
-predict_button = st.markdown(
-    '<button class="custom-button" onclick="window.predict()">Predict Price</button>',
-    unsafe_allow_html=True,
-)
-
-# JavaScript function to trigger prediction
-st.markdown(
-    """
-    <script>
-        function predict() {
-            const event = new Event("click");
-            document.querySelector("button[aria-label='Predict Price']").dispatchEvent(event);
-        }
-    </script>
+    div.stButton > button:hover {
+        background-color: #a01b45;
+    }
+    </style>
     """,
     unsafe_allow_html=True,
 )
 
-# Prediction logic
-if predict_button and bike_name:
-    prediction = model.predict(user_input)
-    st.markdown(
-        f"""
-        <div class="result-box">
-            Predicted Selling Price: ₹{prediction[0]:,.2f}
-        </div>
-    """,
-        unsafe_allow_html=True,
-    )
+# Predict button
+if st.button("Predict Price"):
+    try:
+        # Create input DataFrame with the same structure as training data
+        input_data = pd.DataFrame(
+            {
+                "name": [st.session_state.bike_name],
+                "year": [year],
+                "seller_type": [seller_type],
+                "owner": [owner],
+                "km_driven": [km_driven],
+                "ex_showroom_price": [ex_showroom_price],
+            }
+        )
 
-# Footer information
-st.write(
-    "This app provides an estimate and should be used as a guideline only. Prices may vary."
-)
+        # Make prediction using the pipeline
+        prediction = model.predict(input_data)
+
+        # Display prediction
+        st.markdown(
+            f"""
+            <div style="background-color: #bd2052; padding: 20px; border-radius: 10px; color: white; font-size: 22px; text-align: center; font-weight: bold; margin-top: 20px;">
+                Predicted Selling Price: ₹{prediction[0]:,.2f}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    except Exception as e:
+        st.error(f"An error occurred during prediction: {str(e)}")
